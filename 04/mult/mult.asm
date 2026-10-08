@@ -7,28 +7,35 @@
 // (R0, R1, R2 refer to RAM[0], RAM[1], and RAM[2], respectively.)
 
 // Put your code here.
-@0
-D=A
-@R2
-M=D      // R2 = 0
+// mult.asm
+// 計算 RAM[2] = RAM[0] * RAM[1]
+
+// 1. 初始化 RAM[2] = 0
+@2
+M=0
 
 (LOOP)
-@R0
+// 2. 檢查 RAM[0] 是否 <= 0，如果是就結束跳轉至 END
+@0
 D=M
 @END
-D;JLE    // if (R0 <= 0) goto END
+D;JLE
 
-@R1
-D=M 
-@R2
-M=D+M    // R2 = R2 + R1
+// 3. 累加：RAM[2] = RAM[2] + RAM[1]
+@1
+D=M
+@2
+M=D+M
 
-@R0
-M=M-1    // R0 = R0 - 1
+// 4. 計數器減 1：RAM[0] = RAM[0] - 1
+@0
+M=M-1
 
+// 5. 跳回 LOOP 繼續執行
 @LOOP
-0;JMP    // goto LOOP
+0;JMP
 
 (END)
+// 6. 無限迴圈鎖定程式
 @END
 0;JMP
