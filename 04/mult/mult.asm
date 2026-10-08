@@ -7,45 +7,28 @@
 // (R0, R1, R2 refer to RAM[0], RAM[1], and RAM[2], respectively.)
 
 // Put your code here.
-// #include <stdio.h>
-
-// int main() {
-//    int R0 = 3;
-//    int R1 = 5;
-// =>    int R2 = 0;
 @0
 D=A
 @R2
-M=D 
-//    while (R0 > 0) {
-// => loop:
-(loop)
-// =>    if (R0 <= 0) goto exit1;
+M=D      // R2 = 0
+
+(LOOP)
 @R0
 D=M
-@exit1
-D; JLE
+@END
+D;JLE    // if (R0 <= 0) goto END
 
-// =>  R2 = R2 + R1;
 @R1
 D=M 
 @R2
-M=D+M
+M=D+M    // R2 = R2 + R1
 
-// =>  R0 = R0 - 1;
 @R0
-M=M-1
+M=M-1    // R0 = R0 - 1
 
-//     printf("R0=%d R1=%d R2=%d\n", R0, R1, R2);
-// =>  goto loop;
-@loop
-0;JMP
+@LOOP
+0;JMP    // goto LOOP
 
-// => exit1:
-(exit1)
-@exit1
+(END)
+@END
 0;JMP
-//    }
-    
-//     printf("R2=%d\n", R2);
-// }
