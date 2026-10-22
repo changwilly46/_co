@@ -40,4 +40,78 @@ CHIP CPU {
 
     PARTS:
     // Put your code here:
+    // ==========================================
+    // 1. 指令解碼 (Instruction Decoding)
+    // instruction[15] 是 i-bit，0 代表 A-instruction，1 代表 C-instruction
+    // ==========================================
+    Not(in=instruction[15], out=isA);
+    Not(in=isA, out=isC);
+
+    // ==========================================
+    // 2. A 暫存器 (A-Register)
+    // 決定 A 暫存器的輸入：A-inst 時吃整串指令，C-inst 時吃 ALU 結果
+    // ==========================================
+    Mux16(a=instruction, b=ALUout, sel=instruction[15], out=inA);
+
+    // 決定是否寫入 A 暫存器 (loadA)
+    // 條件：(是 A-instruction) 或者 (是 C-instruction 且 d1(instruction[5]) 為 1)
+    And(a=isC, b=instruction[5], out=destA);
+    Or(a=isA, b=destA, out=loadA);
+    
+    // A 暫存器本體 (同時將輸出拉給 addressM)
+    ARegister(in=inA, load=loadA, out=outA, out[0..14]=addressM);
+
+    // ==========================================
+    // 3. D 暫存器 (D-Register)
+    // ==========================================
+    // 決定是否寫入 D 暫存器 (loadD)
+    // 條件：是 C-instruction 且 d2(instruction[4]) 為 1
+    And(a=isC, b=instruction[4], out=loadD);
+    DRegister(in=ALUout, load=loadD, out=outD);
+
+    // ==========================================
+    // 4. ALU 運算核心
+    // ==========================================
+    // 決定 ALU 的 Y 輸入：來自 A 暫存器還是 inM？由 a-bit (instruction[12]) 決定
+    Mux16(a=outA, b=inM, sel=instruction[12], out=AMout);
+
+    // 將 instruction[6..11] 接到 ALU 控制腳位
+    ALU(x=outD, y=AMout, 
+        zx=instruction[11], nx=instruction[10], 
+        zy=instruction[9], ny=instruction[8], 
+        f=instruction[7], no=instruction[6], 
+        out=ALUout, out=outM, zr=zr, ng=ng);
+
+    // ==========================================
+    // 5. 外部記憶體寫入控制 (writeM)
+    // ==========================================
+    // 條件：是 C-instruction 且 d3(instruction[3]) 為 1
+    And(a=isC, b=instruction[3], out=writeM);
+
+    // ==========================================
+    // 6. 程式計數器 (Program Counter - PC) 跳轉邏輯
+    // ==========================================
+    // j1 = instruction[2] (跳轉條件：< 0)
+    // j2 = instruction[1] (跳轉條件：= 0)
+    // j3 = instruction[0] (跳轉條件：> 0)
+    
+    // 判斷 ALU 輸出是否大於 0 (非負數且非零)
+    Not(in=ng, out=notNg);
+    Not(in=zr, out=notZr);
+    And(a=notNg, b=notZr, out=pos);
+
+    // 分別判斷三個跳轉條件是否成立
+    And(a=instruction[2], b=ng, out=jlt); // < 0 且 j1=1
+    And(a=instruction[1], b=zr, out=jeq); // = 0 且 j2=1
+    And(a=instruction[0], b=pos, out=jgt); // > 0 且 j3=1
+
+    // 只要有任何一個條件成立，就滿足跳轉
+    Or(a=jlt, b=jeq, out=jle);
+    Or(a=jle, b=jgt, out=jmpCondition);
+
+    // 必須是 C-instruction 才能執行跳轉
+    And(a=isC, b=jmpCondition, out=loadPC);
+
+    // PC 本體 (inc 永遠為 true，若 loadPC 為 1 則優先執行 load)
+    PC(in=outA, load=loadPC, inc=true, reset=reset, out[0..14]=pc);
 }
